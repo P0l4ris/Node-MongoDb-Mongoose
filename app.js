@@ -34,32 +34,46 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(cookieParser('12345-67890-09876-54321'));
+//signed cookie
 
 
 //placement of authentication
 function auth(req, res, next) {
-  console.log(req.headers);
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-      const err = new Error('You are not authenticated!');
-      res.setHeader('WWW-Authenticate', 'Basic');
-      err.status = 401;
-      return next(err);
-  }
-// buffer is not required just used? global. Buffer is global Node.js, FROM static is a method of Buffer and split + toString are vanilla js
-  const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-  const user = auth[0];
-  const pass = auth[1];
-  if (user === 'admin' && pass === 'password') {
-      return next(); // authorized
+  //provided by cookie parser. not correct = false or user does not match. Keep challenging
+  if(!req.signedCookies.user) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+          const err = new Error('You are not authenticated!');
+          res.setHeader('WWW-Authenticate', 'Basic');
+          err.status = 401;
+          return next(err);
+      }
+    // buffer is not required just used? global. Buffer is global Node.js, FROM static is a method of Buffer and split + toString are vanilla js
+      const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+      const user = auth[0];
+      const pass = auth[1];
+      if (user === 'admin' && pass === 'password') {
+        //res.cookie is part of res API. Everything here will be stored on the signed cookie object for authentication. Signed true, has server use the secret key we put in parser to make signed cookie. This creates the signed cookie
+          res.cookie('user', 'admin', {signed:true});
+          return next(); // authorized
+      } else {
+          const err = new Error('You are not authenticated!');
+          res.setHeader('WWW-Authenticate', 'Basic');      
+          err.status = 401;
+          return next(err);
+      }
   } else {
-      const err = new Error('You are not authenticated!');
-      res.setHeader('WWW-Authenticate', 'Basic');      
+    if(req.signedCookies.user === 'admin') {
+      return next();
+    } else {
+      const err = new Error('You are not authenticated!');    
       err.status = 401;
       return next(err);
+    }
   }
 }
+
 app.use(auth);
 
 app.use(express.static(path.join(__dirname, 'public')));
