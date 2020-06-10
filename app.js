@@ -49,35 +49,19 @@ app.use(session({
   
 }));
 
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
 
 //placement of authentication
 function auth(req, res, next) {
   console.log(req.session);
   //provided by cookie parser. not correct = false or user does not match. Keep challenging
   if(!req.session.user) {
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-          const err = new Error('You are not authenticated!');
-          res.setHeader('WWW-Authenticate', 'Basic');
-          err.status = 401;
-          return next(err);
-      }
-    // buffer is not required just used? global. Buffer is global Node.js, FROM static is a method of Buffer and split + toString are vanilla js
-      const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-      const user = auth[0];
-      const pass = auth[1];
-      if (user === 'admin' && pass === 'password') {
-        //res.cookie is part of res API. Everything here will be stored on the signed cookie object for authentication. Signed true, has server use the secret key we put in parser to make signed cookie. This creates the signed cookie once correct.
-          req.session.user = 'admin';
-          return next(); // authorized
-      } else {
-          const err = new Error('You are not authenticated!');
-          res.setHeader('WWW-Authenticate', 'Basic');      
-          err.status = 401;
-          return next(err);
-      }
+      const err = new Error('You are not authenticated!');
+      err.status = 401;
+      return next(err);
   } else {
-    if(req.session.user === 'admin') {
+    if(req.session.user === 'authenticated') {
       return next();
     } else {
       const err = new Error('You are not authenticated!');    
@@ -91,14 +75,11 @@ app.use(auth);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
+//pushed Index/ Users to top to have them access before auth or when logging out
 app.use('/campsites', campsiteRouter);
 app.use('/promotions', promotionRouter);
 app.use('/partners', partnerRouter);
 
-
-
-app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
