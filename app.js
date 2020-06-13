@@ -1,13 +1,9 @@
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
-var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-const session = require('express-session');
-//another function returned with require and called with the second parameter
-const FileStore = require('session-file-store')(session);
 const passport = require('passport');
-const authenticate = require('./authenticate');
+const config = require('./config');
 
 
 var indexRouter = require('./routes/index');
@@ -18,7 +14,8 @@ const partnerRouter = require('./routes/partnerRouter');
 
 //bringing in and connecting MongoDB and Mongoose
 const mongoose = require('mongoose');
-const url = 'mongodb://localhost:27017/nucampsite';
+
+const url = config.mongoUrl;
 const connect = mongoose.connect(url, {
   useCreateIndex: true,
   useFindAndModify: false,
@@ -40,37 +37,16 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-//signed cookie
-app.use(session({
-  name:'session-id',
-  secret: '12345-67890-09876-54321',
-  saveUninitialized: false,
-  resave: false,
-  //doesn't save empty sessions after requests. No cookie for client. Re-save/update after every request in session. Most current or active?
-  store: new FileStore() //client memory storage 
-}));
+
+
 
 //initialize passport sessions
 app.use(passport.initialize());
-app.use(passport.session());
+
 
 //routes before auth
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-
-//placement of authentication starts after main index page '/'
-function auth(req, res, next) {
-  console.log(req.user);
-  //provided by cookie parser. not correct = false or user does not match. Keep challenging
-  if(!req.user) {
-      const err = new Error('You are not authenticated!');
-      err.status = 401;
-      return next(err);
-  } else {
-      return next();
-  }
-}
-app.use(auth);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -78,6 +54,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/campsites', campsiteRouter);
 app.use('/promotions', promotionRouter);
 app.use('/partners', partnerRouter);
+
 
 
 
