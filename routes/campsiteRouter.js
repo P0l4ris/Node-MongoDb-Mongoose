@@ -19,17 +19,16 @@ campsiteRouter.use(bodyParser.json());
 
 //deleted .all so we do status codes and headers for various endpoints
 campsiteRouter.route('/')
-
 .get((req, res, next) => {
     Campsite.find()
+    .populate('comments.author')
     .then(campsites => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         res.json(campsites);
     })
     .catch(err => next(err));
-    //removed res.end with the catch, it lets express handle error
-})
+}) 
 .post(authenticate.verifyUser,(req, res, next) => {
     //posts from what the client put in parsed
     //Campsite will check the schema to match all predefined rules
@@ -61,6 +60,7 @@ campsiteRouter.route('/')
 campsiteRouter.route('/:campsiteId')
 .get((req, res, next) => {
     Campsite.findById(req.params.campsiteId)
+    .populate('comments.author')
     .then(campsite => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -108,6 +108,7 @@ campsiteRouter.route('/:campsiteId/comments')
 
 .get((req, res, next) => {
     Campsite.findById(req.params.campsiteId)
+    .populate('comments.author')
     .then(campsite => {
         if (campsite) {
             res.statusCode = 200;
@@ -125,7 +126,8 @@ campsiteRouter.route('/:campsiteId/comments')
     Campsite.findById(req.params.campsiteId)
     .then(campsite => {
         if (campsite) {
-            
+            //before new comment is pushed, we attach a user Id used later to match the user when populated on campsiteRouter
+            req.body.author = req.user._id;
             campsite.comments.push(req.body);
             campsite.save()
             .then(campsite => {
@@ -176,6 +178,7 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
 
 .get((req, res, next) => {
     Campsite.findById(req.params.campsiteId)
+    .populate('comments.author')
     .then(campsite => {
         if (campsite && campsite.comments.id(req.params.commentId)) {
             res.statusCode = 200;
