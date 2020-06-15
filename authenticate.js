@@ -6,6 +6,7 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 //access to the user models to authenticate()
 const User = require('./models/user');
+
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt; //extract jw token from request object
 const jwt = require('jsonwebtoken'); //for making,signing, create, verify tokens
@@ -53,3 +54,18 @@ exports.jwtPassport = passport.use(
 
 //shortcut using verifyUser for further uses instead of retyping this line
 exports.verifyUser = passport.authenticate('jwt', {session: false});
+
+
+
+
+
+
+exports.verifyAdmin = (req, res, next) => {
+    if (req.user.admin === true) {
+       return next();
+    } else {
+        err = new Error('You are not authorized to perform this operation!');
+        err.status = 403;
+        return next(err);
+    }
+}
